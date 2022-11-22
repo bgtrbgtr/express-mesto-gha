@@ -33,16 +33,22 @@ module.exports.getCards = (req, res) => {
 
 module.exports.deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
-    .then((card) => res.send({
-      likes: card.likes,
-      _id: card._id,
-      name: card.name,
-      link: card.link,
-      owner: card.owner,
-    }))
+    .then((card) => {
+      if (card) {
+        res.send({
+          likes: card.likes,
+          _id: card._id,
+          name: card.name,
+          link: card.link,
+          owner: card.owner,
+        });
+      } else {
+        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+      }
+    })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Карточка с указанным id не найдена.' });
       } else {
         res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
       }
@@ -56,17 +62,21 @@ module.exports.addLike = (req, res) => {
     { new: true },
   )
     .populate('likes')
-    .then((card) => res.send({
-      likes: card.likes,
-      _id: card._id,
-      name: card.name,
-      link: card.link,
-      owner: card.owner,
-    }))
-    .catch((err) => {
-      if (err.name === 'CastError') {
+    .then((card) => {
+      if (card) {
+        res.send({
+          likes: card.likes,
+          _id: card._id,
+          name: card.name,
+          link: card.link,
+          owner: card.owner,
+        });
+      } else {
         res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
-      } else if (err.name === 'ValidationError') {
+      }
+    })
+    .catch((err) => {
+      if (err.name === 'CastError' || err.name === 'ValidationError') {
         res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
       } else {
         res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
@@ -80,17 +90,21 @@ module.exports.removeLike = (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => res.send({
-      likes: card.likes,
-      _id: card._id,
-      name: card.name,
-      link: card.link,
-      owner: card.owner,
-    }))
+    .then((card) => {
+      if (card) {
+        res.send({
+          likes: card.likes,
+          _id: card._id,
+          name: card.name,
+          link: card.link,
+          owner: card.owner,
+        });
+      } else {
+        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+      }
+    })
     .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена' });
-      } else if (err.name === 'ValidationError') {
+      if (err.name === 'CastError' || err.name === 'ValidationError') {
         res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
       } else {
         res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });

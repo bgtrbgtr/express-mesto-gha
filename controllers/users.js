@@ -31,7 +31,7 @@ module.exports.getUserById = (req, res) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (user === null) {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Пользователя с указанным id не существует.' });
+        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Пользователя с указанным id не существует.' });
         console.log(req.params);
       } else {
         res.send({
@@ -42,11 +42,21 @@ module.exports.getUserById = (req, res) => {
         });
       }
     })
-    .catch((err) => res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` }));
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Пользователя с указанным id не существует.' });
+      } else {
+        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err}` });
+      }
+    });
 };
 
 module.exports.changeUserInfo = (req, res) => {
-  User.findByIdAndUpdate(req.user._id, { name: req.body.name, about: req.body.about })
+  User.findByIdAndUpdate(
+    req.user._id,
+    { name: req.body.name, about: req.body.about },
+    { new: true, runValidators: true },
+  )
     .then((user) => res.send({
       name: user.name,
       about: user.about,
@@ -54,9 +64,7 @@ module.exports.changeUserInfo = (req, res) => {
       _id: user._id,
     }))
     .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Пользователя с указанным id не существует.' });
-      } else if (err.name === 'ValidationError') {
+      if (err.name === 'CastError' || err.name === 'ValidationError') {
         res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
       } else {
         res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
@@ -65,7 +73,7 @@ module.exports.changeUserInfo = (req, res) => {
 };
 
 module.exports.changeAvatar = (req, res) => {
-  User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar })
+  User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: true })
     .then((user) => res.send({
       name: user.name,
       about: user.about,
