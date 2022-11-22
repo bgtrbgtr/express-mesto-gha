@@ -28,7 +28,7 @@ module.exports.createUser = (req, res) => {
 };
 
 module.exports.getUserById = (req, res) => {
-  User.findById(req.params.userId, { runValidators: true })
+  User.findById(req.params.userId)
     .then((user) => {
       if (user === null) {
         res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Пользователя с указанным id не существует.' });
@@ -45,7 +45,7 @@ module.exports.getUserById = (req, res) => {
       if (err.name === 'CastError') {
         res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Пользователя с указанным id не существует.' });
       } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err}` });
+        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
       }
     });
 };
