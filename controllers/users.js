@@ -28,11 +28,10 @@ module.exports.createUser = (req, res) => {
 };
 
 module.exports.getUserById = (req, res) => {
-  User.findById(req.params.userId)
+  User.findById(req.params.userId, { runValidators: true })
     .then((user) => {
       if (user === null) {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Пользователя с указанным id не существует.' });
-        console.log(req.params);
+        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Пользователя с указанным id не существует.' });
       } else {
         res.send({
           name: user.name,
