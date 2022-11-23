@@ -19,8 +19,6 @@ app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
 app.use('*', require('./routes/not-found'));
 
-app.listen(PORT, () => {
-  console.log(`App listening on port ${PORT}`);
-});
+app.listen(PORT);
 
 mongoose.connect('mongodb://localhost:27017/mestodb');

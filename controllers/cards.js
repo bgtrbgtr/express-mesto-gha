@@ -24,7 +24,6 @@ module.exports.createCard = (req, res) => {
 
 module.exports.getCards = (req, res) => {
   Card.find({})
-    .populate('owner')
     .populate('likes')
     .then((cards) => res.send(cards))
     .catch((err) => res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE)
