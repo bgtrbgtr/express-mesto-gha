@@ -32,18 +32,17 @@ module.exports.getCards = (req, res) => {
 
 module.exports.deleteCard = (req, res) => {
   Card.findByIdAndRemove(req.params.cardId)
+    .orFail(() => {
+      res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+    })
     .then((card) => {
-      if (card) {
-        res.send({
-          likes: card.likes,
-          _id: card._id,
-          name: card.name,
-          link: card.link,
-          owner: card.owner,
-        });
-      } else {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
-      }
+      res.send({
+        likes: card.likes,
+        _id: card._id,
+        name: card.name,
+        link: card.link,
+        owner: card.owner,
+      });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -61,18 +60,17 @@ module.exports.addLike = (req, res) => {
     { new: true },
   )
     .populate('likes')
+    .orFail(() => {
+      res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+    })
     .then((card) => {
-      if (card) {
-        res.send({
-          likes: card.likes,
-          _id: card._id,
-          name: card.name,
-          link: card.link,
-          owner: card.owner,
-        });
-      } else {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
-      }
+      res.send({
+        likes: card.likes,
+        _id: card._id,
+        name: card.name,
+        link: card.link,
+        owner: card.owner,
+      });
     })
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
@@ -89,18 +87,17 @@ module.exports.removeLike = (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
+    .orFail(() => {
+      res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+    })
     .then((card) => {
-      if (card) {
-        res.send({
-          likes: card.likes,
-          _id: card._id,
-          name: card.name,
-          link: card.link,
-          owner: card.owner,
-        });
-      } else {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
-      }
+      res.send({
+        likes: card.likes,
+        _id: card._id,
+        name: card.name,
+        link: card.link,
+        owner: card.owner,
+      });
     })
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
