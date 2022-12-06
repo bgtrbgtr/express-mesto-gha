@@ -31,28 +31,26 @@ module.exports.getCards = (req, res, next) => {
 };
 
 module.exports.deleteCard = (req, res, next) => {
-  Card.findByIdAndRemove(req.params.cardId)
-    .orFail(() => {
-      next(new NotFoundError('Карточка с указанным id не найдена.'));
-    })
+  Card.findById(req.params.cardId)
     .then((card) => {
-      console.log(req.user);
-      if (card.owner !== req.user._id) {
-        next(new ForbiddenError('Удаление карточки другого пользователя невозможно.'));
+      if (card.owner.toString().indexOf(req.user._id) === -1) {
+        throw new ForbiddenError('Удаление карточки другого пользователя невозможно.');
       }
-      return res.send({
-        likes: card.likes,
-        _id: card._id,
-        name: card.name,
-        link: card.link,
-        owner: card.owner,
-      });
+      Card.findByIdAndDelete(req.params.cardId)
+        .then((deletedCard) => res.send({
+          likes: deletedCard.likes,
+          _id: deletedCard._id,
+          name: deletedCard.name,
+          link: deletedCard.link,
+          owner: deletedCard.owner,
+        }))
+        .catch((err) => {
+          if (err.name === 'CastError') {
+            next(new ValidationError('Указаны некорректные данные'));
+          }
+        });
     })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        next(new ValidationError('Указаны некорректные данные'));
-      }
-    });
+    .catch(next);
 };
 
 module.exports.addLike = (req, res, next) => {
