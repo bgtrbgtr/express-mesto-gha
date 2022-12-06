@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
     required: false,
     validate: {
       validator(link) {
-        return /(http)?s?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+\-[\].$'*,;!~#?&\/\/=]*)/.test(link);
+        return /(http)?s?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+\-[\].$'*,;!~#?&//=]*)/.test(link);
       },
       message: 'Некорректная ссылка.',
     },
@@ -54,20 +54,17 @@ userSchema.static('findUserByCredentials', function findUserByCredentials(email,
   return this.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
-        return Promise.reject();
+        throw new UnauthorizedError('Неверно указаны данные пользователя.');
       }
 
       return bcrypt.compare(password, user.password)
         .then((matched) => {
           if (!matched) {
-            return Promise.reject();
+            throw new UnauthorizedError('Неверно указаны данные пользователя.');
           }
 
           return user;
         });
-    })
-    .catch(() => {
-      throw new UnauthorizedError('Неверно указаны данные пользователя.');
     });
 });
 

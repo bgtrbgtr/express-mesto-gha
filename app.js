@@ -26,7 +26,7 @@ app.post('/signup', celebrate({
     password: Joi.string().required().min(6),
     name: Joi.string().min(2).max(30),
     about: Joi.string().min(2).max(30),
-    avatar: Joi.string().pattern(/(http)?s?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+\-[\].$'*,;!~#?&\/\/=]*)/),
+    avatar: Joi.string().pattern(/(http)?s?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+\-[\].$'*,;!~#?&//=]*)/),
   }).unknown(true),
 }), createUser);
 
@@ -38,12 +38,12 @@ app.use('/cards', require('./routes/cards'));
 app.use('*', require('./routes/not-found'));
 
 app.use(errors());
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
   const { statusCode = constants.HTTP_STATUS_SERVICE_UNAVAILABLE, message } = err;
   res
     .status(statusCode)
     .send({
-      message: statusCode === constants.HTTP_STATUS_SERVICE_UNAVAILABLE
+      message: statusCode === 500
         ? 'Ошибка сервера.'
         : message,
     });
