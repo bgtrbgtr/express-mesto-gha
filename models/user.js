@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const isEmail = require('validator/lib/isEmail');
 const bcrypt = require('bcrypt');
+const REGEX_FOR_LINK = require('../constants/regexp');
 const { UnauthorizedError } = require('../errors');
 
 function checkIfEmail(value) {
@@ -28,7 +29,7 @@ const userSchema = new mongoose.Schema({
     required: false,
     validate: {
       validator(link) {
-        return /(http)?s?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+\-[\].$'*,;!~#?&//=]*)/.test(link);
+        return REGEX_FOR_LINK.test(link);
       },
       message: 'Некорректная ссылка.',
     },
@@ -44,7 +45,6 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    minLength: 6,
     required: true,
     select: false,
   },

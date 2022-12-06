@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const {
   ValidationError,
   NotFoundError,
-  UnauthorizedError,
   ConflictError,
+  InternalServerError,
 } = require('../errors/index');
 const User = require('../models/user');
 
@@ -36,6 +36,8 @@ module.exports.createUser = (req, res, next) => {
         next(new ValidationError('Указаны некорректные данные.'));
       } else if (err.code === 11000) {
         next(new ConflictError('Указанная почта уже используется.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера'));
       }
     });
 };
@@ -57,6 +59,8 @@ module.exports.getUserById = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new ValidationError('Пользователя с указанным id не существует.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера.'));
       }
     });
 };
@@ -65,7 +69,7 @@ module.exports.changeUserInfo = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     { name: req.body.name, about: req.body.about },
-    { new: true },
+    { new: true, runValidators: true },
   )
     .then((user) => res.send({
       name: user.name,
@@ -76,12 +80,18 @@ module.exports.changeUserInfo = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера.'));
       }
     });
 };
 
 module.exports.changeAvatar = (req, res, next) => {
-  User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: true })
+  User.findByIdAndUpdate(
+    req.user._id,
+    { avatar: req.body.avatar },
+    { new: true, runValidators: true },
+  )
     .then((user) => res.send({
       name: user.name,
       about: user.about,
@@ -90,9 +100,11 @@ module.exports.changeAvatar = (req, res, next) => {
     }))
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new NotFoundError('Пользователя с указанным id не существует.'));
+        next(new ValidationError('Пользователя с указанным id не существует.'));
       } else if (err.name === 'ValidationError') {
         next(new ValidationError('Ссылка указана некорректно.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера.'));
       }
     });
 };
@@ -117,10 +129,7 @@ module.exports.login = (req, res, next) => {
         .send({ message: 'Авторизация успешна.' });
     })
     .catch((err) => {
-      if (err) {
-        next(err);
-      }
-      next(new UnauthorizedError('Необходима авторизация'));
+      next(err);
     });
 };
 

@@ -3,6 +3,7 @@ const {
   ValidationError,
   NotFoundError,
   ForbiddenError,
+  InternalServerError,
 } = require('../errors/index');
 
 module.exports.createCard = (req, res, next) => {
@@ -20,6 +21,8 @@ module.exports.createCard = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера.'));
       }
     });
 };
@@ -33,12 +36,16 @@ module.exports.getCards = (req, res, next) => {
 module.exports.deleteCard = (req, res, next) => {
   Card.findById(req.params.cardId)
     .orFail(() => {
-      next(new NotFoundError('Карточка с указанным id не найдена.'));
+      throw new NotFoundError('Карточка с указанным id не найдена.');
     })
     .then((card) => {
       if (card.owner.toString().indexOf(req.user._id) === -1) {
         throw new ForbiddenError('Удаление карточки другого пользователя невозможно.');
+      } else {
+        return card;
       }
+    })
+    .then(() => {
       Card.findByIdAndDelete(req.params.cardId)
         .then((deletedCard) => res.send({
           likes: deletedCard.likes,
@@ -46,14 +53,15 @@ module.exports.deleteCard = (req, res, next) => {
           name: deletedCard.name,
           link: deletedCard.link,
           owner: deletedCard.owner,
-        }))
-        .catch((err) => {
-          if (err.name === 'CastError') {
-            next(new ValidationError('Указаны некорректные данные'));
-          }
-        });
+        }));
     })
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new ValidationError('Указаны некорректные данные'));
+      } else {
+        next(new InternalServerError('Ошибка сервера'));
+      }
+    });
 };
 
 module.exports.addLike = (req, res, next) => {
@@ -62,9 +70,8 @@ module.exports.addLike = (req, res, next) => {
     { $addToSet: { likes: req.params.cardId.likes } },
     { new: true },
   )
-    .populate('likes')
     .orFail(() => {
-      next(new NotFoundError('Карточка с указанным id не найдена.'));
+      throw new NotFoundError('Карточка с указанным id не найдена.');
     })
     .then((card) => {
       res.send({
@@ -78,6 +85,8 @@ module.exports.addLike = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера.'));
       }
     });
 };
@@ -89,7 +98,7 @@ module.exports.removeLike = (req, res, next) => {
     { new: true },
   )
     .orFail(() => {
-      next(new NotFoundError('Карточка с указанным id не найдена.'));
+      throw new NotFoundError('Карточка с указанным id не найдена.');
     })
     .then((card) => {
       res.send({
@@ -103,6 +112,8 @@ module.exports.removeLike = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
+      } else {
+        next(new InternalServerError('Ошибка сервера'));
       }
     });
 };

@@ -1,8 +1,8 @@
 const router = require('express').Router();
-const { constants } = require('http2');
+const { NotFoundError } = require('../errors');
 
-router.all('*', (req, res) => {
-  res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Запрашиваемой страницы не существует' });
+router.all('*', (req, res, next) => {
+  next(new NotFoundError('Запрашиваемой страницы не сушествует'));
 });
 
 module.exports = router;
