@@ -47,6 +47,7 @@ app.use((err, req, res, next) => {
         ? 'Ошибка сервера.'
         : message,
     });
+  next();
 });
 
 app.listen(PORT);
