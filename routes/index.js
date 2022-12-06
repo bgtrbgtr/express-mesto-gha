@@ -27,3 +27,5 @@ router.use(auth);
 router.use('/users', userRouter);
 router.use('/cards', cardRouter);
 router.use('*', require('./not-found'));
+
+module.exports = router;
