@@ -3,7 +3,6 @@ const {
   ValidationError,
   NotFoundError,
   ForbiddenError,
-  InternalServerError,
 } = require('../errors/index');
 
 module.exports.createCard = (req, res, next) => {
@@ -22,7 +21,7 @@ module.exports.createCard = (req, res, next) => {
       if (err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
       } else {
-        next(new InternalServerError('Ошибка сервера.'));
+        next(err);
       }
     });
 };
@@ -59,7 +58,7 @@ module.exports.deleteCard = (req, res, next) => {
       if (err.name === 'CastError') {
         next(new ValidationError('Указаны некорректные данные'));
       } else {
-        next(new InternalServerError('Ошибка сервера'));
+        next(err);
       }
     });
 };
@@ -86,7 +85,7 @@ module.exports.addLike = (req, res, next) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
       } else {
-        next(new InternalServerError('Ошибка сервера.'));
+        next(err);
       }
     });
 };
@@ -113,7 +112,7 @@ module.exports.removeLike = (req, res, next) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
         next(new ValidationError('Указаны некорректные данные.'));
       } else {
-        next(new InternalServerError('Ошибка сервера'));
+        next(err);
       }
     });
 };
