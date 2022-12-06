@@ -1,17 +1,30 @@
-const { constants } = require('http2');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const {
+  ValidationError,
+  NotFoundError,
+  UnauthorizedError,
+  ConflictError,
+} = require('../errors/index');
 const User = require('../models/user');
 
-module.exports.getUsers = (req, res) => {
+const { NODE_ENV, JWT_SECRET } = process.env;
+
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send(users))
-    .catch((err) => res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE)
-      .send({ message: `Ошибка сервера. ${err.message}` }));
+    .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
+module.exports.createUser = (req, res, next) => {
+  const {
+    name, about, avatar, email,
+  } = req.body;
 
-  User.create({ name, about, avatar })
+  bcrypt.hash(req.body.password, 10)
+    .then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
     .then((user) => res.send({
       name: user.name,
       about: user.about,
@@ -20,18 +33,18 @@ module.exports.createUser = (req, res) => {
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Указаны некорректные данные.'));
+      } else if (err.code === 11000) {
+        next(new ConflictError('Указанная почта уже используется.'));
       }
     });
 };
 
-module.exports.getUserById = (req, res) => {
+module.exports.getUserById = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (user === null) {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Пользователя с указанным id не существует.' });
+        next(new NotFoundError('Пользователя с указанным id не существует.'));
       } else {
         res.send({
           name: user.name,
@@ -43,18 +56,16 @@ module.exports.getUserById = (req, res) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Пользователя с указанным id не существует.' });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Пользователя с указанным id не существует.'));
       }
     });
 };
 
-module.exports.changeUserInfo = (req, res) => {
+module.exports.changeUserInfo = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     { name: req.body.name, about: req.body.about },
-    { new: true, runValidators: true },
+    { new: true },
   )
     .then((user) => res.send({
       name: user.name,
@@ -64,14 +75,12 @@ module.exports.changeUserInfo = (req, res) => {
     }))
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Указаны некорректные данные.'));
       }
     });
 };
 
-module.exports.changeAvatar = (req, res) => {
+module.exports.changeAvatar = (req, res, next) => {
   User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: true })
     .then((user) => res.send({
       name: user.name,
@@ -81,11 +90,49 @@ module.exports.changeAvatar = (req, res) => {
     }))
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Пользователя с указанным id не существует.' });
+        next(new NotFoundError('Пользователя с указанным id не существует.'));
       } else if (err.name === 'ValidationError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Ссылка указана некорректно.' });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Ссылка указана некорректно.'));
       }
     });
+};
+
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user.id },
+        NODE_ENV === 'production' ? JWT_SECRET : 'secret-word',
+        { expiresIn: '7d' },
+      );
+
+      res
+        .cookie('jwt', token, {
+          maxAge: 3600000 * 24 * 7,
+          httpOnly: true,
+          sameSite: true,
+        })
+        .end();
+    })
+    .catch((err) => {
+      if (err) {
+        next(err);
+      }
+      next(new UnauthorizedError('Необходима авторизация'));
+    });
+};
+
+module.exports.getUserInfo = (req, res, next) => {
+  User.findById(req.user._id)
+    .then((user) => {
+      res.send({
+        name: user.name,
+        about: user.about,
+        avatar: user.avatar,
+        _id: user._id,
+      });
+    })
+    .catch(next);
 };

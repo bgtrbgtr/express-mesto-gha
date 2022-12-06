@@ -1,7 +1,11 @@
-const { constants } = require('http2');
 const Card = require('../models/card');
+const {
+  ValidationError,
+  NotFoundError,
+  ForbiddenError,
+} = require('../errors/index');
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
   const owner = req.user._id;
 
@@ -15,28 +19,27 @@ module.exports.createCard = (req, res) => {
     }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сревера. ${err.message}` });
+        next(new ValidationError('Указаны некорректные данные.'));
       }
     });
 };
 
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   Card.find({})
-    .populate('likes')
     .then((cards) => res.send(cards))
-    .catch((err) => res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE)
-      .send({ message: `Ошибка сервера. ${err.message}` }));
+    .catch(next);
 };
 
-module.exports.deleteCard = (req, res) => {
+module.exports.deleteCard = (req, res, next) => {
   Card.findByIdAndRemove(req.params.cardId)
     .orFail(() => {
-      res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+      next(new NotFoundError('Карточка с указанным id не найдена.'));
     })
     .then((card) => {
-      res.send({
+      if (card.owner !== req.user) {
+        next(new ForbiddenError('Удаление карточки другого пользователя невозможно.'));
+      }
+      return res.send({
         likes: card.likes,
         _id: card._id,
         name: card.name,
@@ -46,14 +49,12 @@ module.exports.deleteCard = (req, res) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: 'Карточка с указанным id не найдена.' });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Указаны некорректные данные'));
       }
     });
 };
 
-module.exports.addLike = (req, res) => {
+module.exports.addLike = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $addToSet: { likes: req.params.cardId.likes } },
@@ -61,7 +62,7 @@ module.exports.addLike = (req, res) => {
   )
     .populate('likes')
     .orFail(() => {
-      res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+      next(new NotFoundError('Карточка с указанным id не найдена.'));
     })
     .then((card) => {
       res.send({
@@ -74,21 +75,19 @@ module.exports.addLike = (req, res) => {
     })
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Указаны некорректные данные.'));
       }
     });
 };
 
-module.exports.removeLike = (req, res) => {
+module.exports.removeLike = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } },
     { new: true },
   )
     .orFail(() => {
-      res.status(constants.HTTP_STATUS_NOT_FOUND).send({ message: 'Карточка с указанным id не найдена.' });
+      next(new NotFoundError('Карточка с указанным id не найдена.'));
     })
     .then((card) => {
       res.send({
@@ -101,9 +100,7 @@ module.exports.removeLike = (req, res) => {
     })
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
-        res.status(constants.HTTP_STATUS_BAD_REQUEST).send({ message: `Указаны некорректные данные. ${err.message}` });
-      } else {
-        res.status(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({ message: `Ошибка сервера. ${err.message}` });
+        next(new ValidationError('Указаны некорректные данные.'));
       }
     });
 };
