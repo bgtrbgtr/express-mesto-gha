@@ -114,7 +114,7 @@ module.exports.login = (req, res, next) => {
           httpOnly: true,
           sameSite: true,
         })
-        .end();
+        .send({ message: 'Авторизация успешна.' });
     })
     .catch((err) => {
       if (err) {
